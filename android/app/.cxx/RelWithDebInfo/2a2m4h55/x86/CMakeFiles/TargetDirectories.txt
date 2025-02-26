@@ -1,0 +1,2 @@
+C:/Users/PEDROAUGUSTOHOCHSCHE/Documents/repo/poke_dex-main/android/app/.cxx/RelWithDebInfo/2a2m4h55/x86/CMakeFiles/edit_cache.dir
+C:/Users/PEDROAUGUSTOHOCHSCHE/Documents/repo/poke_dex-main/android/app/.cxx/RelWithDebInfo/2a2m4h55/x86/CMakeFiles/rebuild_cache.dir

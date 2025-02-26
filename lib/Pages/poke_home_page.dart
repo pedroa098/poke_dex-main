@@ -8,7 +8,7 @@ class PokeHomePage extends StatefulWidget {
   const PokeHomePage({super.key});
 
   @override
-  _PokeHomePageState createState() => _PokeHomePageState();
+  State<PokeHomePage> createState() => _PokeHomePageState();
 }
 
 class _PokeHomePageState extends State<PokeHomePage> {
@@ -17,6 +17,8 @@ class _PokeHomePageState extends State<PokeHomePage> {
   final TextEditingController _searchController = TextEditingController();
   bool _isLoading = true;
   String? _errorMessage;
+
+  var scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
   void initState() {
@@ -54,7 +56,9 @@ class _PokeHomePageState extends State<PokeHomePage> {
 
   @override
   Widget build(BuildContext context) {
+    scaffoldKey = GlobalKey<ScaffoldState>();
     return Scaffold(
+      key: scaffoldKey,
       appBar: AppBar(
         title: const Text("Pokedex"),
       ),
@@ -142,8 +146,9 @@ class _PokeHomePageState extends State<PokeHomePage> {
                 ),
                 child: InkWell(
                   onTap: () {
+                    var contesto = scaffoldKey.currentContext ?? context;
                     Navigator.push(
-                      context,
+                      contesto,
                       MaterialPageRoute(
                         builder: (context) => PokemonDetailPage(
                           pokemonUrl: pokemon.url,

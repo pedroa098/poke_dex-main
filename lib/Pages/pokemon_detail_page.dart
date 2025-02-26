@@ -15,27 +15,33 @@ class PokemonDetailPage extends StatefulWidget {
 }
 
 class _PokemonDetailPageState extends State<PokemonDetailPage> {
-  late Future<PokemonDetails> _pokemonDetails;
+  late PokemonDetails _pokemonDetails;
+  bool _isLoading = true;
   bool casoShiny = false; // Movido para ser uma variável de instância
 
   @override
   void initState() {
     super.initState();
-    _pokemonDetails = _fetchPokemonDetails();
+    _fetchPokemonDetails();
   }
 
-  Future<PokemonDetails> _fetchPokemonDetails() async {
+  Future<void> _fetchPokemonDetails() async {
     final dio = Dio();
     final response = await dio.get(widget.pokemonUrl);
-    return PokemonDetails.fromMap(response.data);
+    _pokemonDetails = PokemonDetails.fromMap(response.data);
+    setState(() {
+      _isLoading = false;
+    });
   }
 
   /// Retorna a cor de fundo com base no tipo do Pokémon
-  Color _getBackgroundColor(List<String> types) {
-    if (types.isEmpty) return Colors.grey; // Cor padrão se não houver tipos
+  Color _getBackgroundColor() {
+    if (_isLoading || _pokemonDetails.types.isEmpty) {
+      return Colors.grey; // Cor padrão se não houver tipos
+    }
 
     // Mapeia o primeiro tipo para uma cor
-    switch (types[0]) {
+    switch (_pokemonDetails.types[0]) {
       case 'grass':
         return const Color.fromARGB(255, 55, 212, 60);
       case 'fire':
@@ -73,319 +79,319 @@ class _PokemonDetailPageState extends State<PokemonDetailPage> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return FutureBuilder<PokemonDetails>(
-      future: _pokemonDetails,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
-        } else if (snapshot.hasError) {
-          return Scaffold(
-            body: Center(child: Text("Erro: ${snapshot.error}")),
-          );
-        } else if (!snapshot.hasData) {
-          return const Scaffold(
-            body: Center(child: Text("Nenhum dado encontrado.")),
-          );
-        } else {
-          var pokemon = snapshot.data!;
-          Color backgroundColor = _getBackgroundColor(pokemon.types);
-
-          return Scaffold(
-            backgroundColor: backgroundColor,
-            appBar: AppBar(
-              title: const Text("Detalhes do Pokémon"),
-              backgroundColor: Colors.transparent,
-              elevation: 0,
-            ),
-            body: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Center(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(
-                        sigmaX: 10, sigmaY: 10), // Efeito de blur
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white
-                            .withOpacity(0.2), // Cor com transparência
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: Colors.white.withOpacity(0.2),
-                          width: 1,
-                        ),
-                      ),
-                      child: Padding(
+  Widget _buildBody() {
+    if (_isLoading == true) {
+      return Center(child: CircularProgressIndicator());
+    }
+    var pokemon = _pokemonDetails;
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Center(
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10), // Efeito de blur
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2), // Cor com transparência
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: Colors.white.withOpacity(0.2),
+                  width: 1,
+                ),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    // Título
+                    _buildPokemonName(pokemon),
+                    const SizedBox(height: 20),
+                    // Imagem do Pokémon
+                    _buildPokemonImage(pokemon),
+                    const SizedBox(height: 20),
+                    // Tipos do Pokémon
+                    _buildPokemonTypes(pokemon),
+                    const SizedBox(height: 20),
+                    // Cards de informações
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        // Card de informações básicas
+                        _buildInformacoesBasicas(pokemon),
+                        const SizedBox(width: 20),
+                        // carta de habilidades
+                        _buildHabilidades(pokemon),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    // Card de estatísticas
+                    Card(
+                      elevation: 4,
+                      color: Colors.white
+                          .withOpacity(0.2), // Cor com transparência
+                      child: Container(
+                        width: double.infinity,
                         padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
                         child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            // Título
-                            Text(
-                              pokemon.name.toUpperCase(),
-                              style: const TextStyle(
-                                fontSize: 26,
+                            const Text(
+                              "Estatísticas",
+                              style: TextStyle(
+                                fontSize: 18,
                                 fontWeight: FontWeight.bold,
                                 color:
                                     Colors.white, // Texto branco para contraste
                               ),
                             ),
-                            const SizedBox(height: 20),
-                            // Imagem do Pokémon
-                            _buildPokemonImage(pokemon),
-                            const SizedBox(height: 20),
-                            // Tipos do Pokémon
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: pokemon.types.map((type) {
-                                IconData icon;
-                                Color color;
-
-                                // ícones e cores
-                                switch (type) {
-                                  case 'grass':
-                                    icon = Icons.grass;
-                                    color = Colors.green;
-                                    break;
-                                  case 'fire':
-                                    icon = Icons.local_fire_department;
-                                    color =
-                                        const Color.fromARGB(255, 240, 73, 7);
-                                    break;
-                                  case 'water':
-                                    icon = Icons.water_drop;
-                                    color =
-                                        const Color.fromARGB(255, 0, 85, 155);
-                                    break;
-                                  case 'electric':
-                                    icon = Icons.bolt;
-                                    color = Colors.yellow;
-                                    break;
-                                  case 'poison':
-                                    icon = FontAwesomeIcons.skullCrossbones;
-                                    color = Colors.deepPurple;
-                                    break;
-                                  case 'bug':
-                                    icon = FontAwesomeIcons.bug;
-                                    color = Colors.lightGreen;
-                                    break;
-                                  case 'flying':
-                                    icon = FontAwesomeIcons.feather;
-                                    color = Colors.lightBlueAccent;
-                                    break;
-                                  case 'normal':
-                                    icon = FontAwesomeIcons.circle;
-                                    color = Colors.grey;
-                                    break;
-                                  case 'fighting':
-                                    icon = FontAwesomeIcons.handBackFist;
-                                    color =
-                                        const Color.fromARGB(255, 219, 31, 31);
-                                    break;
-                                  case 'rock':
-                                    icon = FontAwesomeIcons.gem;
-                                    color =
-                                        const Color.fromARGB(255, 209, 88, 8);
-                                    break;
-                                  case 'ground':
-                                    icon = Icons.terrain_outlined;
-                                    color = Colors.redAccent;
-                                    break;
-                                  case 'ghost':
-                                    icon = FontAwesomeIcons.ghost;
-                                    color =
-                                        const Color.fromARGB(255, 80, 47, 88);
-                                    break;
-                                  case 'psychic':
-                                    icon = FontAwesomeIcons.eye;
-                                    color =
-                                        const Color.fromARGB(255, 211, 46, 189);
-                                    break;
-                                  case 'fairy':
-                                    icon = FontAwesomeIcons.starOfDavid;
-                                    color =
-                                        const Color.fromARGB(255, 204, 85, 168);
-                                    break;
-                                  case 'dragon':
-                                    icon = FontAwesomeIcons.dragon;
-                                    color =
-                                        const Color.fromARGB(255, 4, 0, 255);
-                                    break;
-                                  case 'ice':
-                                    icon = Icons.ac_unit;
-                                    color =
-                                        const Color.fromARGB(255, 0, 238, 255);
-                                    break;
-                                  default:
-                                    icon = Icons.question_mark;
-                                    color = Colors.grey;
-                                }
-
-                                return Padding(
-                                  padding:
-                                      const EdgeInsets.symmetric(horizontal: 8),
-                                  child: Column(
-                                    children: [
-                                      Icon(icon, color: color, size: 30),
-                                      Text(
-                                        type.toUpperCase(),
-                                        style: const TextStyle(
-                                          color: Colors
-                                              .white, // Texto branco para contraste
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              }).toList(),
-                            ),
-                            const SizedBox(height: 20),
-                            // Cards de informações
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                // Card de informações básicas
-                                Card(
-                                  elevation: 4,
-                                  color: Colors.white.withOpacity(
-                                      0.2), // Cor com transparência
-                                  child: Container(
-                                    width: 150,
-                                    padding: const EdgeInsets.all(16),
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: Column(
-                                      children: [
-                                        const Text(
-                                          "Informações",
-                                          style: TextStyle(
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors
-                                                .white, // Texto branco para contraste
-                                          ),
-                                        ),
-                                        const SizedBox(height: 10),
-                                        Text(
-                                          "Altura: ${pokemon.height} m",
-                                          style: const TextStyle(
-                                            color: Colors
-                                                .white, // Texto branco para contraste
-                                          ),
-                                        ),
-                                        Text(
-                                          "Peso: ${pokemon.weight} kg",
-                                          style: const TextStyle(
-                                            color: Colors
-                                                .white, // Texto branco para contraste
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-
-                                const SizedBox(width: 20),
-                                // carta de habilidades
-                                Card(
-                                  elevation: 4,
-                                  color: Colors.white.withOpacity(
-                                      0.2), // Cor com transparência
-                                  child: Container(
-                                    width: 150,
-                                    padding: const EdgeInsets.all(16),
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        const Text(
-                                          "Ataques",
-                                          style: TextStyle(
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors
-                                                .white, // Texto branco para contraste
-                                          ),
-                                        ),
-                                        const SizedBox(height: 10),
-                                        ...pokemon.abilities
-                                            .map((ability) => Text(
-                                                  "- $ability",
-                                                  style: const TextStyle(
-                                                    color: Colors
-                                                        .white, // Texto branco para contraste
-                                                  ),
-                                                ))
-                                            .toList(),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 20),
-                            // Card de estatísticas
-                            Card(
-                              elevation: 4,
-                              color: Colors.white
-                                  .withOpacity(0.2), // Cor com transparência
-                              child: Container(
-                                width: double.infinity,
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Column(
-                                  children: [
-                                    const Text(
-                                      "Estatísticas",
-                                      style: TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors
-                                            .white, // Texto branco para contraste
-                                      ),
-                                    ),
-                                    const SizedBox(height: 10),
-                                    _buildStatRow("HP", pokemon.hp),
-                                    _buildStatRow("Ataque", pokemon.attack),
-                                    _buildStatRow("Defesa", pokemon.defense),
-                                    _buildStatRow("Ataque Special",
-                                        pokemon.specialAttack),
-                                    _buildStatRow("Defesa Special",
-                                        pokemon.specialDefense),
-                                    _buildStatRow("Velocidade", pokemon.speed),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            
+                            const SizedBox(height: 10),
+                            _buildStatRow("HP", pokemon.hp),
+                            _buildStatRow("Ataque", pokemon.attack),
+                            _buildStatRow("Defesa", pokemon.defense),
+                            _buildStatRow(
+                                "Ataque Special", pokemon.specialAttack),
+                            _buildStatRow(
+                                "Defesa Special", pokemon.specialDefense),
+                            _buildStatRow("Velocidade", pokemon.speed),
                           ],
                         ),
                       ),
                     ),
-                  ),
+                  ],
                 ),
               ),
             ),
-          );
+          ),
+        ),
+      ),
+    );
+  }
+
+  Card _buildHabilidades(PokemonDetails pokemon) {
+    return Card(
+      elevation: 4,
+      color: Colors.white.withOpacity(0.2), // Cor com transparência
+      child: Container(
+        width: 150,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              "Ataques",
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.white, // Texto branco para contraste
+              ),
+            ),
+            const SizedBox(height: 10),
+            ...pokemon.abilities
+                .map((ability) => Text(
+                      "- $ability",
+                      style: const TextStyle(
+                        color: Colors.white, // Texto branco para contraste
+                      ),
+                    ))
+                .toList(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Card _buildInformacoesBasicas(PokemonDetails pokemon) {
+    return Card(
+      elevation: 4,
+      color: const Color.fromARGB(255, 0, 0, 0)
+          .withOpacity(0.5), // Cor com transparência
+      child: Container(
+        width: 150,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Column(
+          children: [
+            const Text(
+              "Informações",
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.white, // Texto branco para contraste
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              "Altura: ${pokemon.height} m",
+              style: const TextStyle(
+                color: Colors.white, // Texto branco para contraste
+              ),
+            ),
+            Text(
+              "Peso: ${pokemon.weight} kg",
+              style: const TextStyle(
+                color: Colors.white, // Texto branco para contraste
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Row _buildPokemonTypes(PokemonDetails pokemon) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: pokemon.types.map((type) {
+        IconData icon;
+        Color color;
+
+        // ícones e cores
+        switch (type) {
+          case 'grass':
+            icon = Icons.grass;
+            color = Colors.green;
+            break;
+          case 'fire':
+            icon = Icons.local_fire_department;
+            color = const Color.fromARGB(255, 240, 73, 7);
+            break;
+          case 'water':
+            icon = Icons.water_drop;
+            color = const Color.fromARGB(255, 0, 85, 155);
+            break;
+          case 'electric':
+            icon = Icons.bolt;
+            color = Colors.yellow;
+            break;
+          case 'poison':
+            icon = FontAwesomeIcons.skullCrossbones;
+            color = Colors.deepPurple;
+            break;
+          case 'bug':
+            icon = FontAwesomeIcons.bug;
+            color = Colors.lightGreen;
+            break;
+          case 'flying':
+            icon = FontAwesomeIcons.feather;
+            color = Colors.lightBlueAccent;
+            break;
+          case 'normal':
+            icon = FontAwesomeIcons.circle;
+            color = Colors.grey;
+            break;
+          case 'fighting':
+            icon = FontAwesomeIcons.handBackFist;
+            color = const Color.fromARGB(255, 219, 31, 31);
+            break;
+          case 'rock':
+            icon = FontAwesomeIcons.gem;
+            color = const Color.fromARGB(255, 209, 88, 8);
+            break;
+          case 'ground':
+            icon = Icons.terrain_outlined;
+            color = Colors.redAccent;
+            break;
+          case 'ghost':
+            icon = FontAwesomeIcons.ghost;
+            color = const Color.fromARGB(255, 80, 47, 88);
+            break;
+          case 'psychic':
+            icon = FontAwesomeIcons.eye;
+            color = const Color.fromARGB(255, 211, 46, 189);
+            break;
+          case 'fairy':
+            icon = FontAwesomeIcons.starOfDavid;
+            color = const Color.fromARGB(255, 204, 85, 168);
+            break;
+          case 'dragon':
+            icon = FontAwesomeIcons.dragon;
+            color = const Color.fromARGB(255, 4, 0, 255);
+            break;
+          case 'ice':
+            icon = Icons.ac_unit;
+            color = const Color.fromARGB(255, 0, 238, 255);
+            break;
+          default:
+            icon = Icons.question_mark;
+            color = Colors.grey;
         }
-      },
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          child: Column(
+            children: [
+              Icon(icon, color: color, size: 30),
+              Text(
+                type.toUpperCase(),
+                style: const TextStyle(
+                  color: Colors.white, // Texto branco para contraste
+                ),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildPokemonName(PokemonDetails pokemon) {
+    return InkWell(
+      onTap: () => showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text("Movimentos"),
+          content: Wrap(
+            alignment: WrapAlignment.center,
+            children: List.generate(
+                5,
+                (e) => Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Text("Movim 1"),
+                      ),
+                    )),
+          ),
+        ),
+      ),
+      child: Text(
+        pokemon.name.toUpperCase(),
+        style: const TextStyle(
+          fontSize: 26,
+          fontWeight: FontWeight.bold,
+          color: Colors.white, // Texto branco para contraste
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    Color backgroundColor = _getBackgroundColor();
+
+    return Scaffold(
+      backgroundColor: backgroundColor,
+      appBar: AppBar(
+        title: const Text("Detalhes do Pokémon"),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+      ),
+      body: _buildBody(),
     );
   }
 
   Widget _buildStatRow(String label, int value) {
     IconData icon;
-    
+
     // Escolha o ícone com base no rótulo da estatística
     switch (label.toLowerCase()) {
       case 'hp':
@@ -437,7 +443,8 @@ class _PokemonDetailPageState extends State<PokemonDetailPage> {
             child: LinearProgressIndicator(
               value: value / 100,
               backgroundColor: Colors.grey[300],
-              valueColor: AlwaysStoppedAnimation<Color>(_getColorForStat(value)),
+              valueColor:
+                  AlwaysStoppedAnimation<Color>(_getColorForStat(value)),
             ),
           ),
           const SizedBox(width: 8),
@@ -459,17 +466,14 @@ class _PokemonDetailPageState extends State<PokemonDetailPage> {
       height: 100,
       width: 100,
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.5),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Center(
         child: Image.network(
-          casoShiny
-              ? pokemon.sprites['other']['showdown']['front_shiny']
-              : pokemon.sprites['other']['showdown']['front_default'],
+          pokemon.imageUrl,
           fit: BoxFit.contain,
-          height: 80,
-          width: 80,
+          height: 90,
+          width: 90,
         ),
       ),
     );
